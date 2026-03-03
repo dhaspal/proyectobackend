@@ -7,13 +7,20 @@ const { asyncHandler } = require("../utils/asyncHandler");
 const register = asyncHandler(async (req, res) => {
   const input = registerSchema.parse(req.body);
 
-  const existing = await User.findOne({ email: input.email });
-  if (existing) {
-    return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
+  const existingUsername = await User.findOne({ username: input.username.toLowerCase() });
+  if (existingUsername) {
+    return res.status(409).json({ error: "USERNAME_TAKEN", message: "Username ya registrado" });
+  }
+  if (input.email) {
+    const existingEmail = await User.findOne({ email: input.email.toLowerCase() });
+    if (existingEmail) {
+      return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
+    }
   }
 
   const user = new User({
     name: input.name,
+    username: input.username,
     email: input.email,
     role: input.role,
     phone: input.phone,
@@ -27,7 +34,8 @@ const register = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const input = loginSchema.parse(req.body);
-  const user = await User.findOne({ email: input.email });
+  const username = String(input.username).toLowerCase().trim();
+  const user = await User.findOne({ username });
   if (!user || !user.isActive) {
     return res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Credenciales inválidas" });
   }

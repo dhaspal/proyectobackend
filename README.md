@@ -19,8 +19,8 @@ npm run dev
 - `GET /api/health`
 
 ## Auth
-- `POST /api/auth/register` (role: CLIENT o MECHANIC)
-- `POST /api/auth/login`
+- `POST /api/auth/register` (usa `username`, role: CLIENT o MECHANIC)
+- `POST /api/auth/login` (usa `username`)
 - `GET /api/auth/me` (Bearer token)
 
 ## Roles (RBAC)

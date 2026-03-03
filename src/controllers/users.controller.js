@@ -27,11 +27,18 @@ const getUser = asyncHandler(async (req, res) => {
 const adminCreateUser = asyncHandler(async (req, res) => {
   const input = adminCreateUserSchema.parse(req.body);
 
-  const existing = await User.findOne({ email: input.email });
-  if (existing) return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
+  const existingUsername = await User.findOne({ username: input.username.toLowerCase() });
+  if (existingUsername) {
+    return res.status(409).json({ error: "USERNAME_TAKEN", message: "Username ya registrado" });
+  }
+  if (input.email) {
+    const existingEmail = await User.findOne({ email: input.email.toLowerCase() });
+    if (existingEmail) return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
+  }
 
   const user = new User({
     name: input.name,
+    username: input.username,
     email: input.email,
     role: input.role,
     phone: input.phone,
@@ -50,6 +57,8 @@ const adminUpdateUser = asyncHandler(async (req, res) => {
 
   const input = adminUpdateUserSchema.parse(req.body);
   if (input.name !== undefined) user.name = input.name;
+  if (input.username !== undefined) user.username = input.username;
+  if (input.email !== undefined) user.email = input.email;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.role !== undefined) user.role = input.role;
   if (input.isActive !== undefined) user.isActive = input.isActive;
@@ -67,6 +76,8 @@ const selfUpdate = asyncHandler(async (req, res) => {
   const input = selfUpdateSchema.parse(req.body);
 
   if (input.name !== undefined) user.name = input.name;
+  if (input.username !== undefined) user.username = input.username;
+  if (input.email !== undefined) user.email = input.email;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.password !== undefined) await user.setPassword(input.password);
   await user.save();
