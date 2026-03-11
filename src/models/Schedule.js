@@ -20,6 +20,16 @@ const scheduleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+scheduleSchema.set("toJSON", {
+  virtuals: true,
+  versionKey: false,
+  transform(doc, ret) {
+    ret.id = ret._id?.toString();
+    delete ret._id;
+    return ret;
+  },
+});
+
 scheduleSchema.index({ mechanic: 1, date: 1 }, { unique: true });
 
 const Schedule = mongoose.model("Schedule", scheduleSchema);

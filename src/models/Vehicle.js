@@ -17,6 +17,16 @@ const vehicleSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+vehicleSchema.set("toJSON", {
+  virtuals: true,
+  versionKey: false,
+  transform(doc, ret) {
+    ret.id = ret._id?.toString();
+    delete ret._id;
+    return ret;
+  },
+});
+
 vehicleSchema.index(
   { owner: 1, plate: 1 },
   { unique: false }

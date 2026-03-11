@@ -17,6 +17,16 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+transactionSchema.set("toJSON", {
+  virtuals: true,
+  versionKey: false,
+  transform(doc, ret) {
+    ret.id = ret._id?.toString();
+    delete ret._id;
+    return ret;
+  },
+});
+
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
 module.exports = { Transaction };
