@@ -8,6 +8,7 @@ const schedulesRoutes = require("./schedules.routes");
 const transactionsRoutes = require("./transactions.routes");
 const usersRoutes = require("./users.routes");
 const clientsRoutes = require("./clients.routes");
+const appointmentsRoutes = require("./appointments.routes");
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.use("/schedules", schedulesRoutes);
 router.use("/finance/transactions", transactionsRoutes);
 router.use("/users", usersRoutes);
 router.use("/clients", clientsRoutes);
+router.use("/appointments", appointmentsRoutes);
 
 module.exports = router;
 

@@ -4,6 +4,7 @@ const scheduleEntrySchema = new mongoose.Schema(
   {
     start: { type: String, required: true }, // "09:00"
     end: { type: String, required: true }, // "10:30"
+    appointment: { type: mongoose.Schema.Types.ObjectId, ref: "Appointment" },
     workOrder: { type: mongoose.Schema.Types.ObjectId, ref: "WorkOrder" },
     vehicle: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle" },
     note: { type: String, trim: true },
