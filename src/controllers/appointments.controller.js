@@ -1,8 +1,10 @@
 const mongoose = require("mongoose");
 const { Appointment } = require("../models/Appointment");
+const { WorkOrder } = require("../models/WorkOrder");
 const { Vehicle } = require("../models/Vehicle");
 const { ROLES } = require("../constants/roles");
 const { APPOINTMENT_STATUS } = require("../constants/appointments");
+const { WORK_ORDER_STATUS } = require("../constants/workOrder");
 const { asyncHandler } = require("../utils/asyncHandler");
 const {
   createAppointmentSchema,
@@ -280,6 +282,36 @@ const markComplete = asyncHandler(async (req, res) => {
   appt.status = APPOINTMENT_STATUS.COMPLETED;
   appt.completedAt = new Date();
   appt.workshopNote = input.workshopNote ?? appt.workshopNote;
+
+  // Crear/actualizar reparación para historial del cliente
+  const baseWo = {
+    vehicle: appt.vehicle,
+    client: appt.client,
+    mechanic: appt.mechanic,
+    status: WORK_ORDER_STATUS.DONE,
+    title: appt.title,
+    problemDescription: appt.description,
+    repairDescription: input.repairDescription,
+    cost: input.cost,
+    mileage: input.mileage,
+    finishedAt: new Date(),
+    startedAt: appt.scheduledAt ?? appt.requestedAt,
+  };
+
+  if (appt.workOrder) {
+    const wo = await WorkOrder.findById(appt.workOrder);
+    if (wo) {
+      Object.assign(wo, baseWo);
+      await wo.save();
+    } else {
+      const created = await WorkOrder.create(baseWo);
+      appt.workOrder = created._id;
+    }
+  } else {
+    const created = await WorkOrder.create(baseWo);
+    appt.workOrder = created._id;
+  }
+
   await appt.save();
   return res.json({ appointment: appt });
 });

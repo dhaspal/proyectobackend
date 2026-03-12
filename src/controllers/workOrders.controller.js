@@ -140,6 +140,9 @@ const updateWorkOrderByMechanic = asyncHandler(async (req, res) => {
   }
   if (input.diagnosis !== undefined) wo.diagnosis = input.diagnosis;
   if (input.internalNotes !== undefined) wo.internalNotes = input.internalNotes;
+  if (input.repairDescription !== undefined) wo.repairDescription = input.repairDescription;
+  if (input.cost !== undefined) wo.cost = input.cost;
+  if (input.mileage !== undefined) wo.mileage = input.mileage;
   if (input.laborHours !== undefined) wo.laborHours = input.laborHours;
   if (input.laborRate !== undefined) wo.laborRate = input.laborRate;
   if (input.parts !== undefined) wo.parts = input.parts;

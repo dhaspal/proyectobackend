@@ -9,6 +9,9 @@ const appointmentSchema = new mongoose.Schema(
     // Taller puede asignar un mecánico (opcional)
     mechanic: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
 
+    // Reparación generada al finalizar (para historial)
+    workOrder: { type: mongoose.Schema.Types.ObjectId, ref: "WorkOrder", index: true },
+
     status: {
       type: String,
       enum: Object.values(APPOINTMENT_STATUS),

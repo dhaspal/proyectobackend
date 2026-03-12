@@ -33,6 +33,9 @@ const confirmProposalSchema = z.object({
 });
 
 const markCompleteSchema = z.object({
+  repairDescription: z.string().min(2).max(4000),
+  cost: z.number().min(0),
+  mileage: z.number().int().min(0).optional(),
   workshopNote: z.string().max(2000).optional(),
 });
 

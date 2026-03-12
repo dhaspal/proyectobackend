@@ -29,6 +29,11 @@ const workOrderSchema = new mongoose.Schema(
     clientNotes: { type: String, trim: true },
     internalNotes: { type: String, trim: true },
 
+    // Resultado final para historial del cliente
+    repairDescription: { type: String, trim: true },
+    cost: { type: Number, min: 0 },
+    mileage: { type: Number, min: 0 },
+
     laborHours: { type: Number, min: 0, default: 0 },
     laborRate: { type: Number, min: 0, default: 0 },
     parts: { type: [workItemSchema], default: [] },
@@ -53,6 +58,16 @@ workOrderSchema.virtual("total").get(function total() {
 
 workOrderSchema.set("toJSON", { virtuals: true });
 workOrderSchema.set("toObject", { virtuals: true });
+
+workOrderSchema.set("toJSON", {
+  virtuals: true,
+  versionKey: false,
+  transform(doc, ret) {
+    ret.id = ret._id?.toString();
+    delete ret._id;
+    return ret;
+  },
+});
 
 const WorkOrder = mongoose.model("WorkOrder", workOrderSchema);
 
