@@ -5,6 +5,9 @@ const { hashPassword } = require("../utils/password");
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+    age: { type: Number, min: 0, max: 120 },
     username: { type: String, required: true, lowercase: true, trim: true },
     email: { type: String, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
@@ -37,9 +40,19 @@ userSchema.methods.setPassword = async function setPassword(plain) {
 };
 
 userSchema.methods.toSafeJSON = function toSafeJSON() {
+  const derivedFirstName =
+    this.firstName ||
+    (this.name ? String(this.name).trim().split(/\s+/).slice(0, 1).join(" ") : undefined);
+  const derivedLastName =
+    this.lastName ||
+    (this.name ? String(this.name).trim().split(/\s+/).slice(1).join(" ") : undefined);
+
   return {
     id: this._id.toString(),
     name: this.name,
+    firstName: derivedFirstName,
+    lastName: derivedLastName,
+    age: this.age,
     username: this.username,
     email: this.email,
     role: this.role,

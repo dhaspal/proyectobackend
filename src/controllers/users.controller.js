@@ -37,7 +37,10 @@ const adminCreateUser = asyncHandler(async (req, res) => {
   }
 
   const user = new User({
-    name: input.name,
+    name: input.name || `${input.firstName} ${input.lastName}`.trim(),
+    firstName: input.firstName,
+    lastName: input.lastName,
+    age: input.age,
     username: input.username,
     email: input.email,
     role: input.role,
@@ -57,12 +60,21 @@ const adminUpdateUser = asyncHandler(async (req, res) => {
 
   const input = adminUpdateUserSchema.parse(req.body);
   if (input.name !== undefined) user.name = input.name;
+  if (input.firstName !== undefined) user.firstName = input.firstName;
+  if (input.lastName !== undefined) user.lastName = input.lastName;
+  if (input.age !== undefined) user.age = input.age;
   if (input.username !== undefined) user.username = input.username;
   if (input.email !== undefined) user.email = input.email;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.role !== undefined) user.role = input.role;
   if (input.isActive !== undefined) user.isActive = input.isActive;
   if (input.password !== undefined) await user.setPassword(input.password);
+  if (!input.name && (input.firstName !== undefined || input.lastName !== undefined)) {
+    const fn = user.firstName || "";
+    const ln = user.lastName || "";
+    const full = `${fn} ${ln}`.trim();
+    if (full) user.name = full;
+  }
   await user.save();
   return res.json({ user: user.toSafeJSON() });
 });
@@ -76,10 +88,19 @@ const selfUpdate = asyncHandler(async (req, res) => {
   const input = selfUpdateSchema.parse(req.body);
 
   if (input.name !== undefined) user.name = input.name;
+  if (input.firstName !== undefined) user.firstName = input.firstName;
+  if (input.lastName !== undefined) user.lastName = input.lastName;
+  if (input.age !== undefined) user.age = input.age;
   if (input.username !== undefined) user.username = input.username;
   if (input.email !== undefined) user.email = input.email;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.password !== undefined) await user.setPassword(input.password);
+  if (!input.name && (input.firstName !== undefined || input.lastName !== undefined)) {
+    const fn = user.firstName || "";
+    const ln = user.lastName || "";
+    const full = `${fn} ${ln}`.trim();
+    if (full) user.name = full;
+  }
   await user.save();
   return res.json({ user: user.toSafeJSON() });
 });

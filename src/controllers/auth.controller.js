@@ -19,7 +19,10 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const user = new User({
-    name: input.name,
+    name: input.name || `${input.firstName} ${input.lastName}`.trim(),
+    firstName: input.firstName,
+    lastName: input.lastName,
+    age: input.age,
     username: input.username,
     email: input.email,
     role: input.role,
