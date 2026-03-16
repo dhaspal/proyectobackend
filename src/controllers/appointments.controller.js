@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { Appointment } = require("../models/Appointment");
 const { WorkOrder } = require("../models/WorkOrder");
 const { Vehicle } = require("../models/Vehicle");
+const { User } = require("../models/User");
 const { ROLES } = require("../constants/roles");
 const { APPOINTMENT_STATUS } = require("../constants/appointments");
 const { WORK_ORDER_STATUS } = require("../constants/workOrder");
@@ -16,6 +17,7 @@ const {
   markIncompleteSchema,
 } = require("../validators/appointments.validators");
 const { upsertAppointmentEntry, removeAppointmentEntry } = require("../services/schedule.service");
+const { notifyUser, notifyUsers } = require("../services/notifications.service");
 
 function isValidId(id) {
   return mongoose.isValidObjectId(id);
@@ -61,6 +63,25 @@ const createAppointment = asyncHandler(async (req, res) => {
     status: APPOINTMENT_STATUS.REQUESTED,
     createdBy: req.user.sub,
   });
+
+  // Notificar al taller cuando el cliente crea una solicitud
+  if (req.user.role === ROLES.CLIENT) {
+    const workshopUsers = await User.find({
+      role: { $in: [ROLES.MECHANIC, ROLES.ADMIN] },
+      isActive: true,
+    })
+      .select("_id")
+      .lean();
+
+    const userIds = workshopUsers.map((u) => u._id.toString());
+    await notifyUsers({
+      userIds,
+      type: "APPOINTMENT_REQUESTED",
+      title: "Nueva solicitud de cita",
+      message: "Un cliente ha solicitado una nueva cita.",
+      data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+    });
+  }
 
   return res.status(201).json({ appointment: appt });
 });
@@ -142,6 +163,14 @@ const acceptAppointment = asyncHandler(async (req, res) => {
     note: appt.title,
   });
 
+  await notifyUser({
+    userId: appt.client,
+    type: "APPOINTMENT_ACCEPTED",
+    title: "Cita aceptada",
+    message: `Tu cita fue aceptada para ${appt.scheduledAt.toISOString()}.`,
+    data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+  });
+
   return res.json({ appointment: appt });
 });
 
@@ -164,6 +193,14 @@ const rejectAppointment = asyncHandler(async (req, res) => {
   appt.proposedAt = undefined;
   appt.scheduledAt = undefined;
   await appt.save();
+
+  await notifyUser({
+    userId: appt.client,
+    type: "APPOINTMENT_REJECTED",
+    title: "Cita rechazada",
+    message: input.workshopNote ? `Motivo: ${input.workshopNote}` : "El taller rechazó tu cita.",
+    data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+  });
 
   return res.json({ appointment: appt });
 });
@@ -193,6 +230,14 @@ const proposeReschedule = asyncHandler(async (req, res) => {
   appt.scheduledAt = undefined;
   await appt.save();
 
+  await notifyUser({
+    userId: appt.client,
+    type: "APPOINTMENT_RESCHEDULE_PROPOSED",
+    title: "Reprogramación propuesta",
+    message: `El taller propuso nueva fecha: ${appt.proposedAt.toISOString()}. Confirma o rechaza.`,
+    data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status, proposedAt: appt.proposedAt.toISOString() },
+  });
+
   return res.json({ appointment: appt });
 });
 
@@ -216,6 +261,13 @@ const confirmProposal = asyncHandler(async (req, res) => {
   if (input.confirm === false) {
     appt.status = APPOINTMENT_STATUS.CANCELLED;
     await appt.save();
+    await notifyUser({
+      userId: appt.mechanic,
+      type: "APPOINTMENT_PROPOSAL_REJECTED",
+      title: "Cliente rechazó reprogramación",
+      message: "El cliente rechazó la fecha propuesta.",
+      data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+    });
     return res.json({ appointment: appt });
   }
 
@@ -241,6 +293,14 @@ const confirmProposal = asyncHandler(async (req, res) => {
     note: appt.title,
   });
 
+  await notifyUser({
+    userId: appt.mechanic,
+    type: "APPOINTMENT_CONFIRMED",
+    title: "Cita confirmada",
+    message: `El cliente confirmó la reprogramación para ${appt.scheduledAt.toISOString()}.`,
+    data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+  });
+
   return res.json({ appointment: appt });
 });
 
@@ -264,6 +324,16 @@ const cancelAppointment = asyncHandler(async (req, res) => {
 
   appt.status = APPOINTMENT_STATUS.CANCELLED;
   await appt.save();
+
+  // Avisar a la otra parte (si existe)
+  const other = req.user.role === ROLES.CLIENT ? appt.mechanic : appt.client;
+  await notifyUser({
+    userId: other,
+    type: "APPOINTMENT_CANCELLED",
+    title: "Cita cancelada",
+    message: "Una cita fue cancelada.",
+    data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+  });
   return res.json({ appointment: appt });
 });
 
@@ -313,6 +383,18 @@ const markComplete = asyncHandler(async (req, res) => {
   }
 
   await appt.save();
+  await notifyUser({
+    userId: appt.client,
+    type: "APPOINTMENT_COMPLETED",
+    title: "Servicio finalizado",
+    message: "Tu servicio fue marcado como finalizado. Revisa tu historial de reparaciones.",
+    data: {
+      entityType: "appointment",
+      entityId: appt._id.toString(),
+      status: appt.status,
+      workOrderId: appt.workOrder?.toString(),
+    },
+  });
   return res.json({ appointment: appt });
 });
 
@@ -332,6 +414,13 @@ const markIncomplete = asyncHandler(async (req, res) => {
   appt.incompleteReason = input.reason;
   appt.workshopNote = input.workshopNote ?? appt.workshopNote;
   await appt.save();
+  await notifyUser({
+    userId: appt.client,
+    type: "APPOINTMENT_INCOMPLETE",
+    title: "Servicio incompleto",
+    message: `El taller marcó el servicio como incompleto: ${input.reason}`,
+    data: { entityType: "appointment", entityId: appt._id.toString(), status: appt.status },
+  });
   return res.json({ appointment: appt });
 });
 

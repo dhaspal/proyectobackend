@@ -9,6 +9,9 @@ const transactionsRoutes = require("./transactions.routes");
 const usersRoutes = require("./users.routes");
 const clientsRoutes = require("./clients.routes");
 const appointmentsRoutes = require("./appointments.routes");
+const servicesRoutes = require("./services.routes");
+const inspectionsRoutes = require("./inspections.routes");
+const notificationsRoutes = require("./notifications.routes");
 
 const router = express.Router();
 
@@ -21,6 +24,9 @@ router.use("/finance/transactions", transactionsRoutes);
 router.use("/users", usersRoutes);
 router.use("/clients", clientsRoutes);
 router.use("/appointments", appointmentsRoutes);
+router.use("/services", servicesRoutes);
+router.use("/inspections", inspectionsRoutes);
+router.use("/notifications", notificationsRoutes);
 
 module.exports = router;
 
