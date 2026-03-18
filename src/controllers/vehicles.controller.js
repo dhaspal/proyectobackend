@@ -32,6 +32,7 @@ const createVehicle = asyncHandler(async (req, res) => {
     model: input.model,
     year: input.year,
     color: input.color,
+    fuelType: input.fuelType ?? input.combustible,
     mileage: input.mileage,
     notes: input.notes,
   });
@@ -112,6 +113,9 @@ const updateVehicle = asyncHandler(async (req, res) => {
   if (input.model !== undefined) vehicle.model = input.model;
   if (input.year !== undefined) vehicle.year = input.year;
   if (input.color !== undefined) vehicle.color = input.color;
+  if (input.fuelType !== undefined || input.combustible !== undefined) {
+    vehicle.fuelType = input.fuelType ?? input.combustible;
+  }
   if (input.mileage !== undefined) vehicle.mileage = input.mileage;
   if (input.notes !== undefined) vehicle.notes = input.notes;
 

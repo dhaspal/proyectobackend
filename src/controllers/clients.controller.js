@@ -6,6 +6,11 @@ const { ROLES } = require("../constants/roles");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { createClientSchema, updateClientSchema } = require("../validators/clients.validators");
 
+function parseDob(dateStr) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+}
+
 const getMyClient = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.sub);
   if (!user) return res.status(404).json({ error: "NOT_FOUND", message: "Usuario no existe" });
@@ -36,9 +41,9 @@ const updateMyClient = asyncHandler(async (req, res) => {
   if (input.firstName !== undefined) user.firstName = input.firstName;
   if (input.lastName !== undefined) user.lastName = input.lastName;
   if (input.age !== undefined) user.age = input.age;
+  if (input.dateOfBirth !== undefined) user.dateOfBirth = parseDob(input.dateOfBirth);
   if (input.username !== undefined) user.username = input.username;
   if (input.phone !== undefined) user.phone = input.phone;
-  if (input.email !== undefined) user.email = input.email;
   if (input.address !== undefined) {
     user.clientProfile = user.clientProfile || {};
     user.clientProfile.address = input.address;
@@ -64,18 +69,14 @@ const createClient = asyncHandler(async (req, res) => {
   if (existingUsername) {
     return res.status(409).json({ error: "USERNAME_TAKEN", message: "Username ya registrado" });
   }
-  if (input.email) {
-    const existingEmail = await User.findOne({ email: input.email.toLowerCase() });
-    if (existingEmail) return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
-  }
 
   const user = new User({
     name: input.name || `${input.firstName} ${input.lastName}`.trim(),
     firstName: input.firstName,
     lastName: input.lastName,
     age: input.age,
+    dateOfBirth: input.dateOfBirth ? parseDob(input.dateOfBirth) : undefined,
     username: input.username,
-    email: input.email,
     phone: input.phone,
     role: ROLES.CLIENT,
     clientProfile: input.address ? { address: input.address } : undefined,

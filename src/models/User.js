@@ -7,10 +7,13 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
+    // Preferido: fecha de nacimiento. age queda por compatibilidad (front/back existentes)
+    dateOfBirth: { type: Date },
     age: { type: Number, min: 0, max: 120 },
     username: { type: String, required: true, lowercase: true, trim: true },
-    email: { type: String, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    // Para cuentas Google puede ser null/undefined
+    passwordHash: { type: String },
+    // authProviders Google eliminado (no se usa)
     role: {
       type: String,
       enum: Object.values(ROLES),
@@ -33,7 +36,6 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ username: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 userSchema.methods.setPassword = async function setPassword(plain) {
   this.passwordHash = await hashPassword(plain);
@@ -47,14 +49,26 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     this.lastName ||
     (this.name ? String(this.name).trim().split(/\s+/).slice(1).join(" ") : undefined);
 
+  const dob = this.dateOfBirth instanceof Date && !Number.isNaN(this.dateOfBirth.getTime())
+    ? this.dateOfBirth
+    : null;
+  const derivedAge =
+    this.age ??
+    (dob
+      ? Math.max(
+          0,
+          Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+        )
+      : undefined);
+
   return {
     id: this._id.toString(),
     name: this.name,
     firstName: derivedFirstName,
     lastName: derivedLastName,
-    age: this.age,
+    dateOfBirth: dob ? dob.toISOString() : undefined,
+    age: derivedAge,
     username: this.username,
-    email: this.email,
     role: this.role,
     phone: this.phone,
     isActive: this.isActive,

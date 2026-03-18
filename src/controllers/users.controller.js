@@ -4,6 +4,11 @@ const { ROLES } = require("../constants/roles");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { adminCreateUserSchema, adminUpdateUserSchema, selfUpdateSchema } = require("../validators/users.validators");
 
+function parseDob(dateStr) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+}
+
 const listUsers = asyncHandler(async (req, res) => {
   const q = {};
   if (req.query.role) q.role = String(req.query.role);
@@ -31,18 +36,14 @@ const adminCreateUser = asyncHandler(async (req, res) => {
   if (existingUsername) {
     return res.status(409).json({ error: "USERNAME_TAKEN", message: "Username ya registrado" });
   }
-  if (input.email) {
-    const existingEmail = await User.findOne({ email: input.email.toLowerCase() });
-    if (existingEmail) return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
-  }
 
   const user = new User({
     name: input.name || `${input.firstName} ${input.lastName}`.trim(),
     firstName: input.firstName,
     lastName: input.lastName,
     age: input.age,
+    dateOfBirth: input.dateOfBirth ? parseDob(input.dateOfBirth) : undefined,
     username: input.username,
-    email: input.email,
     role: input.role,
     phone: input.phone,
     isActive: input.isActive ?? true,
@@ -63,8 +64,8 @@ const adminUpdateUser = asyncHandler(async (req, res) => {
   if (input.firstName !== undefined) user.firstName = input.firstName;
   if (input.lastName !== undefined) user.lastName = input.lastName;
   if (input.age !== undefined) user.age = input.age;
+  if (input.dateOfBirth !== undefined) user.dateOfBirth = parseDob(input.dateOfBirth);
   if (input.username !== undefined) user.username = input.username;
-  if (input.email !== undefined) user.email = input.email;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.role !== undefined) user.role = input.role;
   if (input.isActive !== undefined) user.isActive = input.isActive;
@@ -91,8 +92,8 @@ const selfUpdate = asyncHandler(async (req, res) => {
   if (input.firstName !== undefined) user.firstName = input.firstName;
   if (input.lastName !== undefined) user.lastName = input.lastName;
   if (input.age !== undefined) user.age = input.age;
+  if (input.dateOfBirth !== undefined) user.dateOfBirth = parseDob(input.dateOfBirth);
   if (input.username !== undefined) user.username = input.username;
-  if (input.email !== undefined) user.email = input.email;
   if (input.phone !== undefined) user.phone = input.phone;
   if (input.password !== undefined) await user.setPassword(input.password);
   if (!input.name && (input.firstName !== undefined || input.lastName !== undefined)) {

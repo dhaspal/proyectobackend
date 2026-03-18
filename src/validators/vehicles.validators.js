@@ -8,6 +8,8 @@ const vehicleCreateSchema = z.object({
   model: z.string().min(1).max(80),
   year: z.number().int().min(1900).max(2100).optional(),
   color: z.string().min(1).max(60).optional(),
+  fuelType: z.string().min(2).max(40).optional(),
+  combustible: z.string().min(2).max(40).optional(), // compatibilidad con front
   mileage: z.number().int().min(0).optional(),
   notes: z.string().max(2000).optional(),
 });

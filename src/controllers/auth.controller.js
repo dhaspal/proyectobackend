@@ -4,27 +4,31 @@ const { signAccessToken } = require("../utils/tokens");
 const { registerSchema, loginSchema } = require("../validators/auth.validators");
 const { asyncHandler } = require("../utils/asyncHandler");
 
+function normalizeUsername(username) {
+  return String(username || "").trim().toLowerCase();
+}
+
+function parseDob(dateStr) {
+  // YYYY-MM-DD
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+}
+
 const register = asyncHandler(async (req, res) => {
   const input = registerSchema.parse(req.body);
 
-  const existingUsername = await User.findOne({ username: input.username.toLowerCase() });
+  const username = normalizeUsername(input.username);
+  const existingUsername = await User.findOne({ username });
   if (existingUsername) {
-    return res.status(409).json({ error: "USERNAME_TAKEN", message: "Username ya registrado" });
-  }
-  if (input.email) {
-    const existingEmail = await User.findOne({ email: input.email.toLowerCase() });
-    if (existingEmail) {
-      return res.status(409).json({ error: "EMAIL_TAKEN", message: "Email ya registrado" });
-    }
+    return res.status(409).json({ error: "USERNAME_TAKEN", message: "Usuario ya registrado" });
   }
 
   const user = new User({
     name: input.name || `${input.firstName} ${input.lastName}`.trim(),
     firstName: input.firstName,
     lastName: input.lastName,
-    age: input.age,
-    username: input.username,
-    email: input.email,
+    dateOfBirth: input.dateOfBirth ? parseDob(input.dateOfBirth) : undefined,
+    username,
     role: input.role,
     phone: input.phone,
   });
@@ -37,11 +41,13 @@ const register = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const input = loginSchema.parse(req.body);
-  const username = String(input.username).toLowerCase().trim();
+  const username = normalizeUsername(input.username);
   const user = await User.findOne({ username });
+
   if (!user || !user.isActive) {
     return res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Credenciales inválidas" });
   }
+  if (!user.passwordHash) return res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Credenciales inválidas" });
   const ok = await verifyPassword(input.password, user.passwordHash);
   if (!ok) {
     return res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Credenciales inválidas" });

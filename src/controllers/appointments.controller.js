@@ -19,6 +19,12 @@ const {
 const { upsertAppointmentEntry, removeAppointmentEntry } = require("../services/schedule.service");
 const { notifyUser, notifyUsers } = require("../services/notifications.service");
 
+const APPOINTMENT_POPULATE = [
+  { path: "client", select: "name firstName lastName username phone role isActive" },
+  { path: "vehicle", select: "brand model year plate color mileage fuelType owner" },
+  { path: "mechanic", select: "name firstName lastName username phone role isActive" },
+];
+
 function isValidId(id) {
   return mongoose.isValidObjectId(id);
 }
@@ -83,7 +89,8 @@ const createAppointment = asyncHandler(async (req, res) => {
     });
   }
 
-  return res.status(201).json({ appointment: appt });
+  const populated = await Appointment.findById(appt._id).populate(APPOINTMENT_POPULATE);
+  return res.status(201).json({ appointment: populated ?? appt });
 });
 
 const listAppointments = asyncHandler(async (req, res) => {
@@ -98,21 +105,27 @@ const listAppointments = asyncHandler(async (req, res) => {
   if (role === ROLES.CLIENT) q.client = userId;
   if (role === ROLES.MECHANIC) q.mechanic = userId;
 
-  const appointments = await Appointment.find(q).sort({ updatedAt: -1 }).limit(200);
+  const appointments = await Appointment.find(q)
+    .populate(APPOINTMENT_POPULATE)
+    .sort({ updatedAt: -1 })
+    .limit(200);
   return res.json({ appointments });
 });
 
 const listInbox = asyncHandler(async (req, res) => {
   // Taller: "Órdenes" de citas pendientes para gestionar
   const q = { status: APPOINTMENT_STATUS.REQUESTED };
-  const appointments = await Appointment.find(q).sort({ requestedAt: 1 }).limit(200);
+  const appointments = await Appointment.find(q)
+    .populate(APPOINTMENT_POPULATE)
+    .sort({ requestedAt: 1 })
+    .limit(200);
   return res.json({ appointments });
 });
 
 const getAppointment = asyncHandler(async (req, res) => {
   const id = req.params.id;
   if (!isValidId(id)) return res.status(400).json({ error: "BAD_REQUEST", message: "ID inválido" });
-  const appt = await loadAppointmentOr404(id);
+  const appt = await Appointment.findById(id).populate(APPOINTMENT_POPULATE);
   if (!appt) return res.status(404).json({ error: "NOT_FOUND", message: "No existe" });
 
   if (req.user.role === ROLES.CLIENT && String(appt.client) !== req.user.sub) {

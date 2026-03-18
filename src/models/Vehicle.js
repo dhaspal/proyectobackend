@@ -10,6 +10,7 @@ const vehicleSchema = new mongoose.Schema(
     model: { type: String, required: true, trim: true },
     year: { type: Number, min: 1900, max: 2100 },
     color: { type: String, trim: true },
+    fuelType: { type: String, trim: true }, // Gasolina/Diésel/Gas/Híbrido/Eléctrico (u otro)
 
     mileage: { type: Number, min: 0 },
     notes: { type: String, trim: true },

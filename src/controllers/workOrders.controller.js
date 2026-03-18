@@ -32,6 +32,23 @@ function canEditWorkOrderAsMechanic({ role, userId, wo }) {
   return false;
 }
 
+const WORKORDER_POPULATE = [
+  { path: "client", select: "name firstName lastName username phone role isActive" },
+  { path: "vehicle", select: "brand model year plate color mileage fuelType owner" },
+  { path: "mechanic", select: "name firstName lastName username phone role isActive" },
+];
+
+function shapeWorkOrdersForFront(workOrders) {
+  // El front (OrdenesTrabajo.tsx) espera a veces vehicle.user; lo mapeamos desde client.
+  return (workOrders || []).map((wo) => {
+    const obj = wo.toJSON ? wo.toJSON() : wo;
+    if (obj.vehicle && typeof obj.vehicle === "object") {
+      obj.vehicle.user = obj.client;
+    }
+    return obj;
+  });
+}
+
 const createWorkOrder = asyncHandler(async (req, res) => {
   const input = createWorkOrderSchema.parse(req.body);
   const role = req.user.role;
@@ -77,7 +94,8 @@ const createWorkOrder = asyncHandler(async (req, res) => {
     clientNotes: input.clientNotes,
   });
 
-  return res.status(201).json({ workOrder: wo });
+  const populated = await WorkOrder.findById(wo._id).populate(WORKORDER_POPULATE);
+  return res.status(201).json({ workOrder: populated ?? wo });
 });
 
 const listWorkOrders = asyncHandler(async (req, res) => {
@@ -89,29 +107,30 @@ const listWorkOrders = asyncHandler(async (req, res) => {
   if (req.query.vehicleId) q.vehicle = String(req.query.vehicleId);
 
   if (role === ROLES.ADMIN) {
-    const workOrders = await WorkOrder.find(q).sort({ updatedAt: -1 }).limit(200);
-    return res.json({ workOrders });
+    const workOrders = await WorkOrder.find(q).populate(WORKORDER_POPULATE).sort({ updatedAt: -1 }).limit(200);
+    return res.json({ workOrders: shapeWorkOrdersForFront(workOrders) });
   }
   if (role === ROLES.CLIENT) {
     q.client = userId;
-    const workOrders = await WorkOrder.find(q).sort({ updatedAt: -1 }).limit(200);
-    return res.json({ workOrders });
+    const workOrders = await WorkOrder.find(q).populate(WORKORDER_POPULATE).sort({ updatedAt: -1 }).limit(200);
+    return res.json({ workOrders: shapeWorkOrdersForFront(workOrders) });
   }
   // MECHANIC
   q.mechanic = userId;
-  const workOrders = await WorkOrder.find(q).sort({ updatedAt: -1 }).limit(200);
-  return res.json({ workOrders });
+  const workOrders = await WorkOrder.find(q).populate(WORKORDER_POPULATE).sort({ updatedAt: -1 }).limit(200);
+  return res.json({ workOrders: shapeWorkOrdersForFront(workOrders) });
 });
 
 const getWorkOrder = asyncHandler(async (req, res) => {
   const id = req.params.id;
   if (!isValidId(id)) return res.status(400).json({ error: "BAD_REQUEST", message: "ID inválido" });
-  const wo = await getWorkOrderOr404(id);
+  const wo = await WorkOrder.findById(id).populate(WORKORDER_POPULATE);
   if (!wo) return res.status(404).json({ error: "NOT_FOUND", message: "No existe" });
   if (!canReadWorkOrder({ role: req.user.role, userId: req.user.sub, wo })) {
     return res.status(403).json({ error: "FORBIDDEN", message: "Sin permisos" });
   }
-  return res.json({ workOrder: wo });
+  const shaped = shapeWorkOrdersForFront([wo])[0];
+  return res.json({ workOrder: shaped });
 });
 
 const updateWorkOrderByMechanic = asyncHandler(async (req, res) => {
