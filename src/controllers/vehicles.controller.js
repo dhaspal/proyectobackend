@@ -4,6 +4,7 @@ const { WorkOrder } = require("../models/WorkOrder");
 const { ROLES } = require("../constants/roles");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { vehicleCreateSchema, vehicleUpdateSchema } = require("../validators/vehicles.validators");
+const { publishToUser } = require("../services/realtime.service");
 
 async function canReadVehicle({ role, userId, vehicleId }) {
   if (role === ROLES.ADMIN) return true;
@@ -35,6 +36,10 @@ const createVehicle = asyncHandler(async (req, res) => {
     fuelType: input.fuelType ?? input.combustible,
     mileage: input.mileage,
     notes: input.notes,
+  });
+
+  publishToUser(owner, "vehicle.created", {
+    vehicle: vehicle.toJSON(),
   });
 
   return res.status(201).json({ vehicle });
@@ -120,6 +125,9 @@ const updateVehicle = asyncHandler(async (req, res) => {
   if (input.notes !== undefined) vehicle.notes = input.notes;
 
   await vehicle.save();
+  publishToUser(vehicle.owner, "vehicle.updated", {
+    vehicle: vehicle.toJSON(),
+  });
   return res.json({ vehicle });
 });
 
@@ -146,7 +154,10 @@ const deleteVehicle = asyncHandler(async (req, res) => {
     });
   }
 
+  const payload = { vehicleId: vehicle._id.toString() };
+  const owner = vehicle.owner?.toString?.();
   await vehicle.deleteOne();
+  if (owner) publishToUser(owner, "vehicle.deleted", payload);
   return res.status(204).send();
 });
 

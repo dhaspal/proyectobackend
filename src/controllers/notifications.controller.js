@@ -3,6 +3,8 @@ const { Notification } = require("../models/Notification");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { createNotificationSchema, markReadSchema } = require("../validators/notifications.validators");
 const { ROLES } = require("../constants/roles");
+const { notifyUser } = require("../services/notifications.service");
+const { publishToUser } = require("../services/realtime.service");
 
 const listMyNotifications = asyncHandler(async (req, res) => {
   const q = { user: req.user.sub };
@@ -24,6 +26,7 @@ const markRead = asyncHandler(async (req, res) => {
     { _id: { $in: ids }, user: req.user.sub, readAt: null },
     { $set: { readAt: new Date() } }
   );
+  publishToUser(req.user.sub, "notification.read", { ids });
   return res.json({ ok: true, updated: result.modifiedCount ?? result.nModified ?? 0 });
 });
 
@@ -35,13 +38,12 @@ const createNotification = asyncHandler(async (req, res) => {
   if (!mongoose.isValidObjectId(input.userId)) {
     return res.status(400).json({ error: "BAD_REQUEST", message: "userId inválido" });
   }
-  const notification = await Notification.create({
-    user: input.userId,
+  const notification = await notifyUser({
+    userId: input.userId,
     type: input.type,
     title: input.title,
     message: input.message,
     data: input.data,
-    readAt: null,
   });
   return res.status(201).json({
     notification: { ...notification.toJSON(), userId: input.userId, read: false },

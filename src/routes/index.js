@@ -12,6 +12,7 @@ const appointmentsRoutes = require("./appointments.routes");
 const servicesRoutes = require("./services.routes");
 const inspectionsRoutes = require("./inspections.routes");
 const notificationsRoutes = require("./notifications.routes");
+const realtimeRoutes = require("./realtime.routes");
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ router.use("/appointments", appointmentsRoutes);
 router.use("/services", servicesRoutes);
 router.use("/inspections", inspectionsRoutes);
 router.use("/notifications", notificationsRoutes);
+router.use("/realtime", realtimeRoutes);
 
 module.exports = router;
 

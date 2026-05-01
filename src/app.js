@@ -18,6 +18,7 @@ function parseOrigins(value) {
 
 function createApp() {
   const app = express();
+  app.set("trust proxy", 1);
 
   app.use(helmet());
   app.use(morgan("dev"));
@@ -26,6 +27,8 @@ function createApp() {
   const allowedOrigins = parseOrigins(process.env.FRONTEND_ORIGINS);
   const isDev = process.env.NODE_ENV !== "production";
   const localhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+  const capacitorOrigin = /^(capacitor|ionic):\/\/localhost$/i;
+  const customSchemeOrigin = /^[a-z][a-z0-9+\-.]*:\/\/localhost$/i;
   app.use(
     cors({
       origin(origin, cb) {
@@ -34,6 +37,9 @@ function createApp() {
         // En desarrollo, permitir cualquier localhost para evitar "Failed to fetch"
         // cuando el front corre en otro puerto (ej. Vite preview 4173).
         if (isDev && localhostOrigin.test(origin)) return cb(null, true);
+        if (capacitorOrigin.test(origin)) return cb(null, true);
+        // Apps móviles/híbridas pueden usar esquemas personalizados.
+        if (isDev && customSchemeOrigin.test(origin)) return cb(null, true);
         if (allowedOrigins.length === 0) return cb(null, true);
         if (allowedOrigins.includes(origin)) return cb(null, true);
         return cb(new Error("CORS: origen no permitido"));
@@ -41,6 +47,14 @@ function createApp() {
       credentials: true,
     })
   );
+
+  app.use("/api", (req, res, next) => {
+    // Evita respuestas cacheadas en webviews/proxies durante operación móvil.
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    next();
+  });
 
   app.use("/api", apiLimiter, apiRoutes);
 
