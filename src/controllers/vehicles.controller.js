@@ -36,6 +36,8 @@ const createVehicle = asyncHandler(async (req, res) => {
     fuelType: input.fuelType ?? input.combustible,
     mileage: input.mileage,
     notes: input.notes,
+    characteristics: input.characteristics,
+    modifications: input.modifications,
   });
 
   publishToUser(owner, "vehicle.created", {
@@ -105,7 +107,16 @@ const updateVehicle = asyncHandler(async (req, res) => {
   const vehicle = await Vehicle.findById(vehicleId);
   if (!vehicle) return res.status(404).json({ error: "NOT_FOUND", message: "No existe" });
 
-  if (role !== ROLES.ADMIN && vehicle.owner.toString() !== userId) {
+  if (role === ROLES.ADMIN) {
+    // puede editar cualquier vehículo
+  } else if (role === ROLES.CLIENT && vehicle.owner.toString() === userId) {
+    // dueño
+  } else if (role === ROLES.MECHANIC) {
+    const assigned = await WorkOrder.exists({ vehicle: vehicleId, mechanic: userId });
+    if (!assigned) {
+      return res.status(403).json({ error: "FORBIDDEN", message: "Sin permisos" });
+    }
+  } else {
     return res.status(403).json({ error: "FORBIDDEN", message: "Sin permisos" });
   }
 
@@ -123,6 +134,8 @@ const updateVehicle = asyncHandler(async (req, res) => {
   }
   if (input.mileage !== undefined) vehicle.mileage = input.mileage;
   if (input.notes !== undefined) vehicle.notes = input.notes;
+  if (input.characteristics !== undefined) vehicle.characteristics = input.characteristics;
+  if (input.modifications !== undefined) vehicle.modifications = input.modifications;
 
   await vehicle.save();
   publishToUser(vehicle.owner, "vehicle.updated", {

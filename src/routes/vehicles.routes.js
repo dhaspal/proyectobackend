@@ -20,8 +20,8 @@ router.post("/", requireRole(ROLES.CLIENT, ROLES.ADMIN), createVehicle);
 router.get("/", listVehicles);
 router.get("/:id", getVehicle);
 
-// Cliente/Admin pueden actualizar su vehículo
-router.patch("/:id", requireRole(ROLES.CLIENT, ROLES.ADMIN), updateVehicle);
+// Cliente/Admin; mecánico solo si tiene orden asignada a ese vehículo (ver controlador)
+router.patch("/:id", requireRole(ROLES.CLIENT, ROLES.ADMIN, ROLES.MECHANIC), updateVehicle);
 router.delete("/:id", requireRole(ROLES.CLIENT, ROLES.ADMIN), deleteVehicle);
 
 module.exports = router;

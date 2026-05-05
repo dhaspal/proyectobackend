@@ -15,6 +15,7 @@ const {
   confirmProposalSchema,
   markCompleteSchema,
   markIncompleteSchema,
+  cancelAppointmentSchema,
 } = require("../validators/appointments.validators");
 const { upsertAppointmentEntry, removeAppointmentEntry } = require("../services/schedule.service");
 const { notifyUser, notifyUsers } = require("../services/notifications.service");
@@ -329,6 +330,24 @@ const cancelAppointment = asyncHandler(async (req, res) => {
   }
   if (!isClient && !isWorkshop(req)) {
     return res.status(403).json({ error: "FORBIDDEN", message: "Sin permisos" });
+  }
+
+  const terminal = [
+    APPOINTMENT_STATUS.CANCELLED,
+    APPOINTMENT_STATUS.COMPLETED,
+    APPOINTMENT_STATUS.REJECTED,
+    APPOINTMENT_STATUS.INCOMPLETE,
+  ];
+  if (terminal.includes(appt.status)) {
+    return res.status(409).json({
+      error: "INVALID_STATE",
+      message: "Esta cita no se puede cancelar en su estado actual",
+    });
+  }
+
+  const input = cancelAppointmentSchema.parse(req.body ?? {});
+  if (isClient && input.clientNote !== undefined) {
+    appt.clientNote = input.clientNote;
   }
 
   if (appt.mechanic && appt.scheduledAt) {

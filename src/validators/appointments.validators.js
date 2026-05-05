@@ -44,6 +44,10 @@ const markIncompleteSchema = z.object({
   workshopNote: z.string().max(2000).optional(),
 });
 
+const cancelAppointmentSchema = z.object({
+  clientNote: z.string().max(2000).optional(),
+});
+
 module.exports = {
   createAppointmentSchema,
   acceptAppointmentSchema,
@@ -52,5 +56,6 @@ module.exports = {
   confirmProposalSchema,
   markCompleteSchema,
   markIncompleteSchema,
+  cancelAppointmentSchema,
 };
 

@@ -14,6 +14,9 @@ const vehicleSchema = new mongoose.Schema(
 
     mileage: { type: Number, min: 0 },
     notes: { type: String, trim: true },
+    // Historiales largos (texto acumulado con fecha en cliente); opcional
+    characteristics: { type: String, trim: true },
+    modifications: { type: String, trim: true },
   },
   { timestamps: true }
 );
